@@ -52,6 +52,7 @@ def health_check():
 def get_alerts(
     severity: str | None = Query(default=None),
     source_ip: str | None = Query(default=None),
+    status: str | None = Query(default=None),
 ):
     log_file = "backend/log_ingestion/sample_security.log"
 
@@ -74,6 +75,17 @@ def get_alerts(
             if alert.source_ip == source_ip
         ]
 
+    if status:
+        status = status.upper()
+        filtered_alerts = [
+            alert
+            for alert in filtered_alerts
+            if alert_statuses.get(
+                all_alerts.index(alert) + 1,
+                "OPEN",
+            ) == status
+        ]
+
     return {
         "count": len(filtered_alerts),
         "alerts": [
@@ -92,7 +104,6 @@ def get_alerts(
             for alert in filtered_alerts
         ],
     }
-
 
 @app.get("/alerts/stats")
 def get_alert_stats():
