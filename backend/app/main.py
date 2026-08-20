@@ -36,6 +36,7 @@ def get_alerts():
                 "attempts": alert.attempts,
                 "severity": alert.severity,
                 "message": alert.message,
+                "status": "OPEN",
             }
             for alert in alerts
         ],
