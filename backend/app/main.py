@@ -46,7 +46,10 @@ def health_check():
 
 
 @app.get("/alerts")
-def get_alerts(severity: str | None = Query(default=None)):
+def get_alerts(
+    severity: str | None = Query(default=None),
+    source_ip: str | None = Query(default=None),
+):
     log_file = "backend/log_ingestion/sample_security.log"
 
     alerts = process_log_file(log_file)
@@ -57,6 +60,13 @@ def get_alerts(severity: str | None = Query(default=None)):
             alert
             for alert in alerts
             if alert.severity.upper() == severity
+        ]
+
+    if source_ip:
+        alerts = [
+            alert
+            for alert in alerts
+            if alert.source_ip == source_ip
         ]
 
     return {
