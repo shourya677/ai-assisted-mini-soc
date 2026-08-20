@@ -1,13 +1,33 @@
 from fastapi import FastAPI, HTTPException
-from backend.log_ingestion.pipeline import process_log_file
+import json
+from pathlib import Path
 
+from backend.log_ingestion.pipeline import process_log_file
 app = FastAPI(
     title="AI-Assisted Mini SOC",
     description="Automated Threat Detection and Incident Response Platform",
     version="0.1.0",
 )
 
-alert_statuses = {}
+STATUS_FILE = Path("backend/app/alert_status.json")
+
+
+def load_alert_statuses():
+    if not STATUS_FILE.exists():
+        return {}
+
+    with open(STATUS_FILE, "r") as file:
+        data = json.load(file)
+
+    return {int(key): value for key, value in data.items()}
+
+
+def save_alert_statuses(statuses):
+    with open(STATUS_FILE, "w") as file:
+        json.dump(statuses, file, indent=2)
+
+
+alert_statuses = load_alert_statuses()
 
 
 @app.get("/")
@@ -60,6 +80,7 @@ def resolve_alert(alert_id: int):
         )
 
     alert_statuses[alert_id] = "RESOLVED"
+    save_alert_statuses(alert_statuses)
 
     return {
         "alert_id": alert_id,
