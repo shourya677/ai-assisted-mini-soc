@@ -66,7 +66,28 @@ def get_alerts():
             for index, alert in enumerate(alerts, start=1)
         ],
     }
+@app.get("/alerts/{alert_id}")
+def get_alert(alert_id: int):
+    log_file = "backend/log_ingestion/sample_security.log"
+    alerts = process_log_file(log_file)
 
+    if alert_id < 1 or alert_id > len(alerts):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Alert with ID {alert_id} not found",
+        )
+
+    alert = alerts[alert_id - 1]
+
+    return {
+        "id": alert_id,
+        "rule": alert.rule,
+        "source_ip": alert.source_ip,
+        "attempts": alert.attempts,
+        "severity": alert.severity,
+        "message": alert.message,
+        "status": alert_statuses.get(alert_id, "OPEN"),
+    }
 
 @app.post("/alerts/{alert_id}/resolve")
 def resolve_alert(alert_id: int):
