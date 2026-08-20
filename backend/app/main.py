@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 import json
 from pathlib import Path
 
@@ -46,10 +46,18 @@ def health_check():
 
 
 @app.get("/alerts")
-def get_alerts():
+def get_alerts(severity: str | None = Query(default=None)):
     log_file = "backend/log_ingestion/sample_security.log"
 
     alerts = process_log_file(log_file)
+
+    if severity:
+        severity = severity.upper()
+        alerts = [
+            alert
+            for alert in alerts
+            if alert.severity.upper() == severity
+        ]
 
     return {
         "count": len(alerts),
