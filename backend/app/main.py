@@ -3,11 +3,14 @@ import json
 from pathlib import Path
 
 from backend.log_ingestion.pipeline import process_log_file
+
+
 app = FastAPI(
     title="AI-Assisted Mini SOC",
     description="Automated Threat Detection and Incident Response Platform",
     version="0.1.0",
 )
+
 
 STATUS_FILE = Path("backend/app/alert_status.json")
 
@@ -52,38 +55,90 @@ def get_alerts(
 ):
     log_file = "backend/log_ingestion/sample_security.log"
 
-    alerts = process_log_file(log_file)
+    all_alerts = process_log_file(log_file)
+
+    filtered_alerts = all_alerts
 
     if severity:
         severity = severity.upper()
-        alerts = [
+        filtered_alerts = [
             alert
-            for alert in alerts
+            for alert in filtered_alerts
             if alert.severity.upper() == severity
         ]
 
     if source_ip:
-        alerts = [
+        filtered_alerts = [
             alert
-            for alert in alerts
+            for alert in filtered_alerts
             if alert.source_ip == source_ip
         ]
 
     return {
-        "count": len(alerts),
+        "count": len(filtered_alerts),
         "alerts": [
             {
-                "id": index,
+                "id": all_alerts.index(alert) + 1,
                 "rule": alert.rule,
                 "source_ip": alert.source_ip,
                 "attempts": alert.attempts,
                 "severity": alert.severity,
                 "message": alert.message,
-                "status": alert_statuses.get(index, "OPEN"),
+                "status": alert_statuses.get(
+                    all_alerts.index(alert) + 1,
+                    "OPEN",
+                ),
             }
-            for index, alert in enumerate(alerts, start=1)
+            for alert in filtered_alerts
         ],
     }
+
+
+@app.get("/alerts/stats")
+def get_alert_stats():
+    log_file = "backend/log_ingestion/sample_security.log"
+    alerts = process_log_file(log_file)
+
+    total = len(alerts)
+
+    open_count = 0
+    acknowledged_count = 0
+    resolved_count = 0
+
+    high_count = 0
+    medium_count = 0
+    low_count = 0
+
+    for index, alert in enumerate(alerts, start=1):
+        status = alert_statuses.get(index, "OPEN")
+
+        if status == "OPEN":
+            open_count += 1
+        elif status == "ACKNOWLEDGED":
+            acknowledged_count += 1
+        elif status == "RESOLVED":
+            resolved_count += 1
+
+        severity = alert.severity.upper()
+
+        if severity == "HIGH":
+            high_count += 1
+        elif severity == "MEDIUM":
+            medium_count += 1
+        elif severity == "LOW":
+            low_count += 1
+
+    return {
+        "total": total,
+        "open": open_count,
+        "acknowledged": acknowledged_count,
+        "resolved": resolved_count,
+        "high": high_count,
+        "medium": medium_count,
+        "low": low_count,
+    }
+
+
 @app.get("/alerts/{alert_id}")
 def get_alert(alert_id: int):
     log_file = "backend/log_ingestion/sample_security.log"
@@ -106,6 +161,8 @@ def get_alert(alert_id: int):
         "message": alert.message,
         "status": alert_statuses.get(alert_id, "OPEN"),
     }
+
+
 @app.post("/alerts/{alert_id}/acknowledge")
 def acknowledge_alert(alert_id: int):
     log_file = "backend/log_ingestion/sample_security.log"
