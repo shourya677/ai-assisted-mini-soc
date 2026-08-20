@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from backend.log_ingestion.pipeline import process_log_file
 
 app = FastAPI(
@@ -50,6 +50,15 @@ def get_alerts():
 
 @app.post("/alerts/{alert_id}/resolve")
 def resolve_alert(alert_id: int):
+    log_file = "backend/log_ingestion/sample_security.log"
+    alerts = process_log_file(log_file)
+
+    if alert_id < 1 or alert_id > len(alerts):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Alert with ID {alert_id} not found",
+        )
+
     alert_statuses[alert_id] = "RESOLVED"
 
     return {
