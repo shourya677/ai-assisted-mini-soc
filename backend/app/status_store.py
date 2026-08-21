@@ -1,8 +1,31 @@
-import json
+﻿import json
 from pathlib import Path
 
 
 STATUS_FILE = Path("backend/app/alert_status.json")
+
+
+ALLOWED_STATUSES = {
+    "OPEN",
+    "ACKNOWLEDGED",
+    "RESOLVED",
+}
+
+
+ALLOWED_TRANSITIONS = {
+    "OPEN": {
+        "OPEN",
+        "ACKNOWLEDGED",
+        "RESOLVED",
+    },
+    "ACKNOWLEDGED": {
+        "ACKNOWLEDGED",
+        "RESOLVED",
+    },
+    "RESOLVED": {
+        "RESOLVED",
+    },
+}
 
 
 def load_alert_statuses() -> dict[int, str]:
@@ -13,7 +36,10 @@ def load_alert_statuses() -> dict[int, str]:
     if not STATUS_FILE.exists():
         return {}
 
-    with STATUS_FILE.open("r", encoding="utf-8") as file:
+    with STATUS_FILE.open(
+        "r",
+        encoding="utf-8",
+    ) as file:
         data = json.load(file)
 
     return {
@@ -22,7 +48,9 @@ def load_alert_statuses() -> dict[int, str]:
     }
 
 
-def save_alert_statuses(statuses: dict[int, str]) -> None:
+def save_alert_statuses(
+    statuses: dict[int, str],
+) -> None:
     """
     Save alert statuses to the JSON status file.
     """
@@ -63,20 +91,30 @@ def set_alert_status(
     statuses: dict[int, str],
 ) -> dict[int, str]:
     """
-    Update an alert status and return the updated status mapping.
+    Update an alert status while enforcing
+    valid alert lifecycle transitions.
     """
-
-    allowed_statuses = {
-        "OPEN",
-        "ACKNOWLEDGED",
-        "RESOLVED",
-    }
 
     status = status.upper()
 
-    if status not in allowed_statuses:
+    if status not in ALLOWED_STATUSES:
         raise ValueError(
             f"Invalid alert status: {status}"
+        )
+
+    current_status = get_alert_status(
+        alert_id,
+        statuses,
+    )
+
+    allowed_next_statuses = ALLOWED_TRANSITIONS[
+        current_status
+    ]
+
+    if status not in allowed_next_statuses:
+        raise ValueError(
+            f"Invalid status transition: "
+            f"{current_status} -> {status}"
         )
 
     statuses[alert_id] = status
