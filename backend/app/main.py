@@ -1,8 +1,13 @@
 from fastapi import FastAPI, HTTPException, Query, UploadFile, File
-import json
 from pathlib import Path
 
 from backend.log_ingestion.pipeline import process_log_file
+from backend.app.status_store import (
+    load_alert_statuses,
+    save_alert_statuses,
+    get_alert_status,
+    set_alert_status,
+)
 
 
 app = FastAPI(
@@ -12,25 +17,8 @@ app = FastAPI(
 )
 
 
-STATUS_FILE = Path("backend/app/alert_status.json")
-
 UPLOAD_DIR = Path("backend/app/uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
-
-def load_alert_statuses():
-    if not STATUS_FILE.exists():
-        return {}
-
-    with open(STATUS_FILE, "r") as file:
-        data = json.load(file)
-
-    return {int(key): value for key, value in data.items()}
-
-
-def save_alert_statuses(statuses):
-    with open(STATUS_FILE, "w") as file:
-        json.dump(statuses, file, indent=2)
 
 
 alert_statuses = load_alert_statuses()
@@ -139,9 +127,9 @@ def get_alerts(
         filtered_alerts = [
             alert
             for alert in filtered_alerts
-            if alert_statuses.get(
+            if get_alert_status(
                 all_alerts.index(alert) + 1,
-                "OPEN",
+                alert_statuses,
             ) == status
         ]
 
@@ -155,9 +143,9 @@ def get_alerts(
                 "attempts": alert.attempts,
                 "severity": alert.severity,
                 "message": alert.message,
-                "status": alert_statuses.get(
+                "status": get_alert_status(
                     all_alerts.index(alert) + 1,
-                    "OPEN",
+                    alert_statuses,
                 ),
             }
             for alert in filtered_alerts
@@ -182,9 +170,9 @@ def get_alert_stats():
     low_count = 0
 
     for index, alert in enumerate(alerts, start=1):
-        status = alert_statuses.get(
+        status = get_alert_status(
             index,
-            "OPEN",
+            alert_statuses,
         )
 
         if status == "OPEN":
@@ -235,9 +223,9 @@ def get_alert(alert_id: int):
         "attempts": alert.attempts,
         "severity": alert.severity,
         "message": alert.message,
-        "status": alert_statuses.get(
+        "status": get_alert_status(
             alert_id,
-            "OPEN",
+            alert_statuses,
         ),
     }
 
@@ -254,7 +242,11 @@ def acknowledge_alert(alert_id: int):
             detail=f"Alert with ID {alert_id} not found",
         )
 
-    alert_statuses[alert_id] = "ACKNOWLEDGED"
+    set_alert_status(
+        alert_id,
+        "ACKNOWLEDGED",
+        alert_statuses,
+    )
 
     save_alert_statuses(alert_statuses)
 
@@ -276,7 +268,11 @@ def resolve_alert(alert_id: int):
             detail=f"Alert with ID {alert_id} not found",
         )
 
-    alert_statuses[alert_id] = "RESOLVED"
+    set_alert_status(
+        alert_id,
+        "RESOLVED",
+        alert_statuses,
+    )
 
     save_alert_statuses(alert_statuses)
 
