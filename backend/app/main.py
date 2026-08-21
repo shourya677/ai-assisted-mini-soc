@@ -242,11 +242,17 @@ def acknowledge_alert(alert_id: int):
             detail=f"Alert with ID {alert_id} not found",
         )
 
-    set_alert_status(
-        alert_id,
-        "ACKNOWLEDGED",
-        alert_statuses,
-    )
+    try:
+        set_alert_status(
+            alert_id,
+            "ACKNOWLEDGED",
+            alert_statuses,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )
 
     save_alert_statuses(alert_statuses)
 
@@ -268,11 +274,17 @@ def resolve_alert(alert_id: int):
             detail=f"Alert with ID {alert_id} not found",
         )
 
-    set_alert_status(
-        alert_id,
-        "RESOLVED",
-        alert_statuses,
-    )
+    try:
+        set_alert_status(
+            alert_id,
+            "RESOLVED",
+            alert_statuses,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )
 
     save_alert_statuses(alert_statuses)
 
