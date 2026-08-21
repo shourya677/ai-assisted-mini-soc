@@ -165,6 +165,55 @@ def get_alerts(
     }
 
 
+@app.get("/alerts/stats")
+def get_alert_stats():
+    log_file = "backend/log_ingestion/sample_security.log"
+
+    alerts = process_log_file(log_file)
+
+    total = len(alerts)
+
+    open_count = 0
+    acknowledged_count = 0
+    resolved_count = 0
+
+    high_count = 0
+    medium_count = 0
+    low_count = 0
+
+    for index, alert in enumerate(alerts, start=1):
+        status = alert_statuses.get(
+            index,
+            "OPEN",
+        )
+
+        if status == "OPEN":
+            open_count += 1
+        elif status == "ACKNOWLEDGED":
+            acknowledged_count += 1
+        elif status == "RESOLVED":
+            resolved_count += 1
+
+        severity = alert.severity.upper()
+
+        if severity == "HIGH":
+            high_count += 1
+        elif severity == "MEDIUM":
+            medium_count += 1
+        elif severity == "LOW":
+            low_count += 1
+
+    return {
+        "total": total,
+        "open": open_count,
+        "acknowledged": acknowledged_count,
+        "resolved": resolved_count,
+        "high": high_count,
+        "medium": medium_count,
+        "low": low_count,
+    }
+
+
 @app.get("/alerts/{alert_id}")
 def get_alert(alert_id: int):
     log_file = "backend/log_ingestion/sample_security.log"
@@ -190,59 +239,6 @@ def get_alert(alert_id: int):
             alert_id,
             "OPEN",
         ),
-    }
-
-
-@app.get("/alerts/stats")
-def get_alert_stats():
-    log_file = "backend/log_ingestion/sample_security.log"
-
-    alerts = process_log_file(log_file)
-
-    total = len(alerts)
-
-    open_count = 0
-    acknowledged_count = 0
-    resolved_count = 0
-
-    high_count = 0
-    medium_count = 0
-    low_count = 0
-
-    for index, alert in enumerate(alerts, start=1):
-        status = alert_statuses.get(
-            index,
-            "OPEN",
-        )
-
-        if status == "OPEN":
-            open_count += 1
-
-        elif status == "ACKNOWLEDGED":
-            acknowledged_count += 1
-
-        elif status == "RESOLVED":
-            resolved_count += 1
-
-        severity = alert.severity.upper()
-
-        if severity == "HIGH":
-            high_count += 1
-
-        elif severity == "MEDIUM":
-            medium_count += 1
-
-        elif severity == "LOW":
-            low_count += 1
-
-    return {
-        "total": total,
-        "open": open_count,
-        "acknowledged": acknowledged_count,
-        "resolved": resolved_count,
-        "high": high_count,
-        "medium": medium_count,
-        "low": low_count,
     }
 
 

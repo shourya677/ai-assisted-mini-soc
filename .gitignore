@@ -4,4 +4,4 @@ __pycache__/
 .env
 .env.*
 !.env.example
-.vscode/
+.vscode/backend/app/uploads/
